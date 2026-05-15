@@ -6,7 +6,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 
 // ── Color Scheme ──────────────────────────────────────────────────────────────
-private val AwarenessDarkColorScheme = darkColorScheme(
+private val BlinkDarkColorScheme = darkColorScheme(
     // Backgrounds
     background         = Background,
     surface            = Surface,
@@ -35,7 +35,7 @@ private val AwarenessDarkColorScheme = darkColorScheme(
 )
 
 // ── Typography — mapped to Material3 type-scale slots ─────────────────────────
-private val AwarenessTypography = Typography(
+private val BlinkTypography = Typography(
     displayLarge  = DisplayStyle,   // 48sp / Light  — big screen-time number
     titleMedium   = TitleStyle,     // 22sp / SemiBold — section headings
     bodyMedium    = BodyStyle,      // 15sp / Normal  — body text
@@ -45,10 +45,10 @@ private val AwarenessTypography = Typography(
 
 // ── Theme Entry Point ─────────────────────────────────────────────────────────
 @Composable
-fun AwarenessTheme(content: @Composable () -> Unit) {
+fun BlinkTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = AwarenessDarkColorScheme,
-        typography  = AwarenessTypography,
+        colorScheme = BlinkDarkColorScheme,
+        typography  = BlinkTypography,
         content     = content,
     )
 }

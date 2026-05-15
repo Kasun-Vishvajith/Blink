@@ -28,6 +28,9 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun appUsageDao(): AppUsageDao
     abstract fun dailySummaryDao(): DailySummaryDao
+    abstract fun callSessionDao(): CallSessionDao
+    abstract fun mediaSessionDao(): MediaSessionDao
+    abstract fun notificationDao(): NotificationDao
 
     companion object {
         private const val DB_NAME = "awareness.db"

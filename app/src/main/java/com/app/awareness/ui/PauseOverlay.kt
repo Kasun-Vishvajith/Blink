@@ -43,7 +43,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.app.awareness.ui.theme.Accent
 import com.app.awareness.ui.theme.TextSecondary
 import com.app.awareness.ui.theme.TitleStyle
-import com.app.awareness.ui.theme.AwarenessTheme
+import com.app.awareness.ui.theme.BlinkTheme
 import com.app.awareness.ui.theme.BodyStyle
 import com.app.awareness.ui.theme.TextPrimary
 import kotlinx.coroutines.delay
@@ -133,7 +133,7 @@ class PauseOverlayManager(private val context: Context) {
             setViewTreeSavedStateRegistryOwner(lifecycleOwner)
 
             setContent {
-                AwarenessTheme {
+                BlinkTheme {
                     PauseOverlayContent(
                         appName        = appName,
                         todayMinutes   = todayMinutes,

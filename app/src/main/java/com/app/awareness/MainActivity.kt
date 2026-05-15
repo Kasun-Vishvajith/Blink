@@ -7,16 +7,23 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.app.awareness.ui.theme.AwarenessTheme
+import com.app.awareness.ui.theme.BlinkTheme
+
+import com.app.awareness.ui.BlinkNavGraph
+import com.app.awareness.ui.Routes
+import android.content.Context
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            AwarenessTheme {
+            BlinkTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    // TODO: Add NavHost / root composable here
+                    val prefs = getSharedPreferences("awareness_settings", Context.MODE_PRIVATE)
+                    val start = if (prefs.getBoolean("onboarding_complete", false)) Routes.HOME else Routes.ONBOARDING
+                    
+                    BlinkNavGraph(startDestination = start)
                 }
             }
         }

@@ -47,7 +47,7 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import com.app.awareness.ui.theme.AwarenessTheme
+import com.app.awareness.ui.theme.BlinkTheme
 import com.app.awareness.ui.theme.BodyStyle
 import com.app.awareness.ui.theme.Positive
 import com.app.awareness.ui.theme.SurfaceVariant
@@ -134,7 +134,7 @@ class DynamicPillManager(private val context: Context) {
             setViewTreeSavedStateRegistryOwner(lifecycleOwner)
 
             setContent {
-                AwarenessTheme {
+                BlinkTheme {
                     DynamicPillContent(
                         message   = message,
                         sentiment = sentiment,

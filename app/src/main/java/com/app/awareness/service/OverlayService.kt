@@ -211,7 +211,7 @@ class OverlayService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Awareness Monitor",
+                "Blink Monitor",
                 NotificationManager.IMPORTANCE_MIN,
             ).apply {
                 setShowBadge(false)
@@ -223,7 +223,7 @@ class OverlayService : Service() {
 
     private fun buildNotification(): Notification =
         NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Awareness")
+            .setContentTitle("Blink")
             .setContentText("Monitoring app usage")
             .setSmallIcon(android.R.drawable.ic_menu_view)
             .setPriority(NotificationCompat.PRIORITY_MIN)

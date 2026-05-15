@@ -58,4 +58,10 @@ interface AppUsageDao {
         LIMIT :limit
     """)
     fun getTopApps(date: String, limit: Int = 5): Flow<List<AppUsageEntity>>
+
+    /**
+     * Non-flow version for one-off lookups (e.g. by PillNotificationService).
+     */
+    @Query("SELECT total_minutes FROM app_usage WHERE package_name=:pkg AND date=:date LIMIT 1")
+    suspend fun queryByDateOnce(pkg: String, date: String): Int?
 }

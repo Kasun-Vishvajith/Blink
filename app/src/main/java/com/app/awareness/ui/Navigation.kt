@@ -18,6 +18,7 @@ import com.app.awareness.ui.theme.TextSecondary
 import com.app.awareness.viewmodel.AppDetailViewModel
 import com.app.awareness.viewmodel.HomeViewModel
 import com.app.awareness.viewmodel.WeeklyViewModel
+import com.app.awareness.ui.OnboardingScreen
 
 // ── Route constants ───────────────────────────────────────────────────────────
 
@@ -25,6 +26,7 @@ object Routes {
     const val HOME       = "home"
     const val WEEKLY     = "weekly"
     const val SETTINGS   = "settings"
+    const val ONBOARDING = "onboarding"
     const val APP_DETAIL = "detail/{packageName}"
 
     fun appDetail(packageName: String) = "detail/$packageName"
@@ -33,7 +35,7 @@ object Routes {
 // ── Nav graph ─────────────────────────────────────────────────────────────────
 
 /**
- * Root NavHost for the Awareness app.
+ * Root NavHost for the Blink app.
  *
  * Navigation structure (FRONTEND.md):
  *   HomeScreen  (default destination)
@@ -47,7 +49,7 @@ object Routes {
  * Any screen → back via system gesture / navController.popBackStack().
  */
 @Composable
-fun AwarenessNavGraph(
+fun BlinkNavGraph(
     startDestination: String = Routes.HOME,
 ) {
     val navController = rememberNavController()
@@ -56,6 +58,15 @@ fun AwarenessNavGraph(
         navController    = navController,
         startDestination = startDestination,
     ) {
+
+        // ── Onboarding ────────────────────────────────────────────────────────
+        composable(Routes.ONBOARDING) {
+            OnboardingScreen(onComplete = {
+                navController.navigate(Routes.HOME) {
+                    popUpTo(Routes.ONBOARDING) { inclusive = true }
+                }
+            })
+        }
 
         // ── Home ──────────────────────────────────────────────────────────────
         composable(Routes.HOME) {
@@ -123,15 +134,4 @@ fun AwarenessNavGraph(
     }
 }
 
-// ── Settings placeholder ──────────────────────────────────────────────────────
 
-/**
- * Placeholder — full SettingsScreen implementation per FRONTEND.md Screen 5.
- * Replace with the real composable when Screen 5 is built.
- */
-@Composable
-fun SettingsScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Settings — coming soon", color = TextSecondary)
-    }
-}
