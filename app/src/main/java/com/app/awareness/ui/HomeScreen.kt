@@ -52,91 +52,34 @@ import java.util.Date
 import java.util.Locale
 import androidx.compose.foundation.WindowInsets
 import androidx.compose.foundation.layout.statusBars
-
-// ── Mock data models (private to this file) ───────────────────────────────────
-
-private data class AppRowData(
-    val name: String,
-    val minutes: Int,
-    val dotColor: Color,
-)
-
-private data class BenchmarkItem(
-    val label: String,
-    val userValue: String,
-    val worldValue: String,
-    val isBetter: Boolean,
-)
-
-// ── Mock data ─────────────────────────────────────────────────────────────────
-
-private val mockInsights = listOf(
-    InsightCardData(
-        message   = "You open Instagram 5 times a day. Most people open it 23 times. You're remarkably intentional.",
-        sentiment = "positive",
-        metric    = "instagram_opens",
-    ),
-    InsightCardData(
-        message   = "Today was unusual — your screen time was 52% higher than your weekly average.",
-        sentiment = "warning",
-        metric    = "screen_time",
-    ),
-    InsightCardData(
-        message   = "You spent 18 minutes on Spotify today. The average is 82 minutes.",
-        sentiment = "positive",
-        metric    = "spotify_minutes",
-    ),
-    InsightCardData(
-        message   = "Your Mondays are consistently your highest screen time day.",
-        sentiment = "neutral",
-        metric    = "screen_time",
-    ),
-)
-
-private val mockApps = listOf(
-    AppRowData("Instagram", 87,  Color(0xFFE1306C)),
-    AppRowData("YouTube",   65,  Color(0xFFFF0000)),
-    AppRowData("WhatsApp",  43,  Color(0xFF25D366)),
-    AppRowData("Spotify",   38,  Color(0xFF1DB954)),
-    AppRowData("Chrome",    22,  Color(0xFF4285F4)),
-)
-
-private val mockBenchmarks = listOf(
-    BenchmarkItem("Screen time", "3h 22m", "6h 37m", isBetter = true),
-    BenchmarkItem("App opens",   "47",     "72",     isBetter = true),
-    BenchmarkItem("Notifications","43",    "96",     isBetter = true),
-)
+import com.app.awareness.viewmodel.AppUsageStat
+import com.app.awareness.viewmodel.BenchmarkStat
 
 // ── HomeScreen ────────────────────────────────────────────────────────────────
 
 /**
  * Screen 2 — Home (Daily Summary) — FRONTEND.md
  *
- * Single vertical scroll. Five sections:
- *   A – Header (time, date, greeting)
- *   B – Today's Big Number (total screen time)
- *   C – Insight Cards (horizontal scroll)
- *   D – App Breakdown (top 5 apps)
- *   E – Benchmark Row ("You vs the world")
- *
- * All data is hardcoded mock — connect a ViewModel in the next pass.
+ * Stateless composable. All data supplied by HomeViewModel via Navigation.kt.
  */
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    todayScreenTime: Int                    = 0,
+    topApps: List<AppUsageStat>             = emptyList(),
+    insights: List<InsightCardData>         = emptyList(),
+    benchmarkStats: List<BenchmarkStat>     = emptyList(),
+    yesterdayDelta: Int                     = 0,
+    onAppClick: (String) -> Unit            = {},
+    onSettingsClick: () -> Unit             = {},
+    onWeeklySwipe: () -> Unit               = {},
+) {
     val scrollState = rememberScrollState()
 
-    // Derive time-based values once per composition
     val calendar = remember { Calendar.getInstance() }
-    val timeText = remember {
-        SimpleDateFormat("h:mm", Locale.getDefault()).format(Date())
-    }
-    val amPm = remember {
-        SimpleDateFormat("a", Locale.getDefault()).format(Date())
-    }
-    val dateText = remember {
-        SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
-    }
-    val hour = remember { calendar.get(Calendar.HOUR_OF_DAY) }
+    val timeText = remember { SimpleDateFormat("h:mm", Locale.getDefault()).format(Date()) }
+    val amPm     = remember { SimpleDateFormat("a", Locale.getDefault()).format(Date()) }
+    val dateText = remember { SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date()) }
+    val hour     = remember { calendar.get(Calendar.HOUR_OF_DAY) }
     val greeting = when {
         hour < 6  -> "Still up?"
         hour < 12 -> "Good morning"
@@ -145,9 +88,11 @@ fun HomeScreen() {
         else      -> "Still up?"
     }
 
-    // Mock totals
-    val totalMinutes   = 202
-    val comparisonText = "37 min less than yesterday"
+    val comparisonText = when {
+        yesterdayDelta > 0  -> "${yesterdayDelta} min less than yesterday"
+        yesterdayDelta < 0  -> "${-yesterdayDelta} min more than yesterday"
+        else                -> "Same as yesterday"
+    }
 
     Column(
         modifier = Modifier
@@ -156,30 +101,15 @@ fun HomeScreen() {
             .windowInsetsPadding(WindowInsets.statusBars)
             .verticalScroll(scrollState),
     ) {
-
-        // ── Section A — Header ────────────────────────────────────────────────
         SectionHeader(timeText, amPm, dateText, greeting)
-
         Spacer(modifier = Modifier.height(32.dp))
-
-        // ── Section B — Today's Big Number ────────────────────────────────────
-        BigNumberSection(totalMinutes, comparisonText)
-
+        BigNumberSection(todayScreenTime, comparisonText)
         Spacer(modifier = Modifier.height(36.dp))
-
-        // ── Section C — Insight Cards ─────────────────────────────────────────
-        InsightCardsSection(mockInsights)
-
+        InsightCardsSection(insights)
         Spacer(modifier = Modifier.height(36.dp))
-
-        // ── Section D — App Breakdown ─────────────────────────────────────────
-        AppBreakdownSection(mockApps)
-
+        AppBreakdownSection(topApps, onAppClick)
         Spacer(modifier = Modifier.height(36.dp))
-
-        // ── Section E — Benchmark Row ─────────────────────────────────────────
-        BenchmarkSection(mockBenchmarks)
-
+        BenchmarkSection(benchmarkStats)
         Spacer(modifier = Modifier.height(48.dp))
     }
 }
@@ -314,111 +244,73 @@ private fun InsightCardsSection(insights: List<InsightCardData>) {
 // ── Section D — App Breakdown ─────────────────────────────────────────────────
 
 @Composable
-private fun AppBreakdownSection(apps: List<AppRowData>) {
-    val maxMinutes = apps.maxOfOrNull { it.minutes }?.toFloat() ?: 1f
+private fun AppBreakdownSection(apps: List<AppUsageStat>, onAppClick: (String) -> Unit) {
+    val maxMinutes = apps.maxOfOrNull { it.totalMinutes }?.toFloat() ?: 1f
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp),
     ) {
-        Text(
-            text  = "Where your time went",
-            style = TitleStyle,
-            color = TextPrimary,
-        )
-
+        Text(text = "Where your time went", style = TitleStyle, color = TextPrimary)
         Spacer(modifier = Modifier.height(16.dp))
-
         apps.forEach { app ->
-            AppRow(app = app, maxMinutes = maxMinutes)
+            AppRow(app = app, maxMinutes = maxMinutes, onClick = { onAppClick(app.packageName) })
             Spacer(modifier = Modifier.height(14.dp))
         }
     }
 }
 
 @Composable
-private fun AppRow(app: AppRowData, maxMinutes: Float) {
-    val barFraction = (app.minutes / maxMinutes).coerceIn(0f, 1f)
+private fun AppRow(app: AppUsageStat, maxMinutes: Float, onClick: () -> Unit) {
+    val barFraction = (app.totalMinutes / maxMinutes).coerceIn(0f, 1f)
+    val dotColor    = packageColor(app.packageName)
 
     Row(
-        modifier        = Modifier.fillMaxWidth(),
+        modifier          = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // App colour dot with initial
         Box(
-            modifier          = Modifier
+            modifier         = Modifier
                 .size(36.dp)
                 .clip(CircleShape)
-                .background(app.dotColor.copy(alpha = 0.2f))
-                .border(1.dp, app.dotColor.copy(alpha = 0.5f), CircleShape),
+                .background(dotColor.copy(alpha = 0.2f))
+                .border(1.dp, dotColor.copy(alpha = 0.5f), CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text  = app.name.first().toString(),
-                style = LabelStyle,
-                color = app.dotColor,
-            )
+            Text(text = app.appName.first().toString(), style = LabelStyle, color = dotColor)
         }
 
         Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            // App name
-            Text(
-                text  = app.name,
-                style = BodyStyle,
-                color = TextPrimary,
-            )
+            Text(text = app.appName, style = BodyStyle, color = TextPrimary)
             Spacer(modifier = Modifier.height(4.dp))
-
-            // Proportional bar
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(100.dp))
-                    .background(SurfaceVariant),
+                modifier = Modifier.fillMaxWidth().height(4.dp)
+                    .clip(RoundedCornerShape(100.dp)).background(SurfaceVariant),
             ) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth(barFraction)
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(100.dp))
-                        .background(Accent),
+                    modifier = Modifier.fillMaxWidth(barFraction).height(4.dp)
+                        .clip(RoundedCornerShape(100.dp)).background(Accent),
                 )
             }
         }
 
         Spacer(modifier = Modifier.width(12.dp))
-
-        // Time label
-        Text(
-            text      = formatMinutes(app.minutes),
-            style     = CaptionStyle,
-            color     = TextSecondary,
-            textAlign = TextAlign.End,
-        )
+        Text(text = formatMinutes(app.totalMinutes), style = CaptionStyle, color = TextSecondary, textAlign = TextAlign.End)
     }
 }
 
 // ── Section E — Benchmark Row ─────────────────────────────────────────────────
 
 @Composable
-private fun BenchmarkSection(benchmarks: List<BenchmarkItem>) {
+private fun BenchmarkSection(benchmarks: List<BenchmarkStat>) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
     ) {
-        Text(
-            text  = "You vs the world",
-            style = TitleStyle,
-            color = TextPrimary,
-        )
-
+        Text(text = "You vs the world", style = TitleStyle, color = TextPrimary)
         Spacer(modifier = Modifier.height(16.dp))
-
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             benchmarks.forEach { item ->
                 BenchmarkPill(item = item, modifier = Modifier.weight(1f))
@@ -428,48 +320,33 @@ private fun BenchmarkSection(benchmarks: List<BenchmarkItem>) {
 }
 
 @Composable
-private fun BenchmarkPill(item: BenchmarkItem, modifier: Modifier = Modifier) {
+private fun BenchmarkPill(item: BenchmarkStat, modifier: Modifier = Modifier) {
     val valueColor = if (item.isBetter) Positive else TextSecondary
-
     Column(
-        modifier          = modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(Surface)
+        modifier            = modifier.clip(RoundedCornerShape(20.dp)).background(Surface)
             .padding(horizontal = 12.dp, vertical = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text      = item.label,
-            style     = LabelStyle,
-            color     = TextMuted,
-            textAlign = TextAlign.Center,
-        )
-
+        Text(text = item.label,      style = LabelStyle,                    color = TextMuted,    textAlign = TextAlign.Center)
         Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text      = item.userValue,
-            style     = TitleStyle.copy(fontSize = 18.sp),
-            color     = valueColor,
-            textAlign = TextAlign.Center,
-        )
-
-        Text(
-            text      = "avg ${item.worldValue}",
-            style     = CaptionStyle,
-            textAlign = TextAlign.Center,
-        )
+        Text(text = item.userValue,  style = TitleStyle.copy(fontSize = 18.sp), color = valueColor, textAlign = TextAlign.Center)
+        Text(text = "avg ${item.worldValue}", style = CaptionStyle, textAlign = TextAlign.Center)
     }
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
 private fun formatMinutes(minutes: Int): String {
-    val h = minutes / 60
-    val m = minutes % 60
-    return when {
-        h > 0 && m > 0 -> "${h}h ${m}m"
-        h > 0          -> "${h}h"
-        else           -> "${m}m"
-    }
+    val h = minutes / 60; val m = minutes % 60
+    return when { h > 0 && m > 0 -> "${h}h ${m}m"; h > 0 -> "${h}h"; else -> "${m}m" }
+}
+
+/** Deterministic accent color derived from package name — consistent across recompositions. */
+private fun packageColor(pkg: String): Color {
+    val palette = listOf(
+        Color(0xFFE1306C), Color(0xFF1DB954), Color(0xFF4285F4),
+        Color(0xFFFF0000), Color(0xFF25D366), Color(0xFFFF6B35),
+        Color(0xFF00E5A0), Color(0xFFC8FF00),
+    )
+    return palette[Math.abs(pkg.hashCode()) % palette.size]
 }
